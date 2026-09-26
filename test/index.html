@@ -1,0 +1,1399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HabitX API Testing Suite</title>
+  <script src="https://cdn.socket.io/4.8.4/socket.io.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #0B0B0D;
+      color: #F7F7F8;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      font-size: 14px;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 320px 1fr 440px;
+      gap: 20px;
+      height: calc(100vh - 48px);
+    }
+
+    @media (max-width: 1200px) {
+      .container {
+        grid-template-columns: 1fr;
+        height: auto;
+      }
+    }
+
+    .panel {
+      background-color: #141416;
+      border: 1px solid #28282D;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid #28282D;
+      background-color: #1C1C20;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .panel-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #F7F7F8;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-body {
+      padding: 16px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .nav-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .nav-item {
+      padding: 10px 14px;
+      background-color: transparent;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      color: #A3A3AB;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.15s ease;
+      text-align: left;
+      width: 100%;
+    }
+
+    .nav-item:hover {
+      background-color: #1C1C20;
+      color: #F7F7F8;
+    }
+
+    .nav-item.active {
+      background-color: #2B2440;
+      border-color: #A98AF7;
+      color: #A98AF7;
+      font-weight: 600;
+    }
+
+    .badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-get {
+      background-color: #1C2B22;
+      color: #55B887;
+      border: 1px solid #55B887;
+    }
+
+    .badge-post {
+      background-color: #2B2440;
+      color: #A98AF7;
+      border: 1px solid #A98AF7;
+    }
+
+    .badge-patch {
+      background-color: #332818;
+      color: #E5B35A;
+      border: 1px solid #E5B35A;
+    }
+
+    .badge-delete {
+      background-color: #331A1D;
+      color: #E16B76;
+      border: 1px solid #E16B76;
+    }
+
+    .auth-banner {
+      background-color: #1C1C20;
+      border: 1px solid #28282D;
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .auth-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #777780;
+    }
+
+    .status-dot.active {
+      background-color: #55B887;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #A3A3AB;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-control {
+      width: 100%;
+      background-color: #1C1C20;
+      border: 1px solid #28282D;
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: #F7F7F8;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .form-control:focus {
+      border-color: #A98AF7;
+    }
+
+    textarea.form-control {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 12px;
+      min-height: 140px;
+      resize: vertical;
+      line-height: 1.4;
+    }
+
+    .btn {
+      background-color: #A98AF7;
+      color: #0B0B0D;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background-color 0.15s ease;
+    }
+
+    .btn:hover {
+      background-color: #8E6BE8;
+    }
+
+    .btn-secondary {
+      background-color: #1C1C20;
+      color: #F7F7F8;
+      border: 1px solid #28282D;
+    }
+
+    .btn-secondary:hover {
+      background-color: #28282D;
+    }
+
+    .btn-sm {
+      padding: 6px 10px;
+      font-size: 11px;
+      border-radius: 8px;
+    }
+
+    .btn-danger {
+      background-color: #E16B76;
+      color: #FFFFFF;
+    }
+
+    .btn-danger:hover {
+      background-color: #D95C68;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .endpoint-card {
+      background-color: #18181C;
+      border: 1px solid #28282D;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .endpoint-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .endpoint-url {
+      font-family: monospace;
+      font-size: 13px;
+      color: #F7F7F8;
+    }
+
+    .response-view {
+      background-color: #0B0B0D;
+      border: 1px solid #28282D;
+      border-radius: 10px;
+      padding: 12px;
+      font-family: monospace;
+      font-size: 12px;
+      color: #A3A3AB;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 480px;
+    }
+
+    .status-pill {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    .status-200 {
+      background-color: #1C2B22;
+      color: #55B887;
+    }
+
+    .status-400 {
+      background-color: #331A1D;
+      color: #E16B76;
+    }
+
+    .socket-log {
+      background-color: #0B0B0D;
+      border: 1px solid #28282D;
+      border-radius: 10px;
+      padding: 12px;
+      height: 220px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .socket-log-entry {
+      color: #A3A3AB;
+    }
+
+    .socket-log-entry.event {
+      color: #A98AF7;
+    }
+
+    .socket-log-entry.reaction {
+      color: #E5B35A;
+    }
+
+    .quick-preset-row {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A98AF7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+          HabitX API Tester
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="pingHealth()">Ping</button>
+      </div>
+      <div class="panel-body">
+        <div class="auth-banner">
+          <div class="auth-status">
+            <span class="status-dot" id="auth-status-dot"></span>
+            <span id="auth-status-text">Not Authenticated</span>
+          </div>
+          <div class="action-row">
+            <button class="btn btn-sm" onclick="quickGuestAuth()">Guest Login</button>
+            <button class="btn btn-secondary btn-sm" onclick="clearAuth()">Logout</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Base API URL</label>
+          <input type="text" id="base-url" class="form-control" value="http://localhost:5000/api/v1">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Active JWT Bearer Token</label>
+          <input type="text" id="jwt-token" class="form-control" placeholder="Bearer token..." oninput="updateTokenState()">
+        </div>
+
+        <div class="nav-list" id="endpoint-nav">
+          <button class="nav-item active" onclick="switchSuite('auth')">
+            <span>Authentication</span>
+            <span class="badge badge-post">Auth</span>
+          </button>
+          <button class="nav-item" onclick="switchSuite('user')">
+            <span>User & Profile</span>
+            <span class="badge badge-get">User</span>
+          </button>
+          <button class="nav-item" onclick="switchSuite('focus')">
+            <span>Focus Sessions</span>
+            <span class="badge badge-post">Focus</span>
+          </button>
+          <button class="nav-item" onclick="switchSuite('blocking')">
+            <span>App & Web Blocking</span>
+            <span class="badge badge-patch">Block</span>
+          </button>
+          <button class="nav-item" onclick="switchSuite('habits')">
+            <span>Habits & Streaks</span>
+            <span class="badge badge-post">Habit</span>
+          </button>
+          <button class="nav-item" onclick="switchSuite('goals')">
+            <span>Goals & Progress</span>
+            <span class="badge badge-get">Goal</span>
+          </button>
+          <button class="nav-item" onclick="switchSuite('schedules')">
+            <span>Schedule Planner</span>
+            <span class="badge badge-get">Plan</span>
+          </button>
+          <button class="nav-item" onclick="switchSuite('rooms')">
+            <span>Multiplayer Rooms</span>
+            <span class="badge badge-post">Social</span>
+          </button>
+          <button class="nav-item" onclick="switchSuite('leaderboard')">
+            <span>Leaderboards</span>
+            <span class="badge badge-get">Rank</span>
+          </button>
+          <button class="nav-item" onclick="switchSuite('gamification')">
+            <span>XP, Levels & Rewards</span>
+            <span class="badge badge-post">XP</span>
+          </button>
+          <button class="nav-item" onclick="switchSuite('ai')">
+            <span>AI Companion</span>
+            <span class="badge badge-get">AI</span>
+          </button>
+          <button class="nav-item" onclick="switchSuite('screentime')">
+            <span>Screen Time Analytics</span>
+            <span class="badge badge-post">Stats</span>
+          </button>
+          <button class="nav-item" onclick="switchSuite('notifications')">
+            <span>Notifications & Nudges</span>
+            <span class="badge badge-get">Alert</span>
+          </button>
+          <button class="nav-item" onclick="switchSuite('music')">
+            <span>Focus Music</span>
+            <span class="badge badge-get">Audio</span>
+          </button>
+          <button class="nav-item" onclick="switchSuite('sync')">
+            <span>Batch Offline Sync</span>
+            <span class="badge badge-post">Sync</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title" id="suite-title">Authentication Endpoints</div>
+        <button class="btn btn-secondary btn-sm" onclick="executeCurrentEndpoint()">Run Endpoint</button>
+      </div>
+      <div class="panel-body" id="suite-content">
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Response & Live WebSocket</div>
+        <button class="btn btn-secondary btn-sm" onclick="clearResponse()">Clear</button>
+      </div>
+      <div class="panel-body">
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label class="form-label" style="margin: 0;">API Response</label>
+            <div id="response-meta" style="display: flex; gap: 8px; align-items: center;">
+              <span id="response-status" class="status-pill status-200">READY</span>
+              <span id="response-time" style="font-size: 11px; color: #777780;">0 ms</span>
+            </div>
+          </div>
+          <div class="response-view" id="response-output">No requests made yet. Select an endpoint on the left and click "Run Endpoint" or use preset buttons.</div>
+        </div>
+
+        <div class="form-group" style="margin-top: 18px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label class="form-label" style="margin: 0;">Socket.IO Multiplayer Focus Room</label>
+            <span id="socket-status" style="font-size: 11px; color: #777780;">Disconnected</span>
+          </div>
+
+          <div class="action-row" style="margin-bottom: 8px;">
+            <input type="text" id="socket-room-code" class="form-control" style="width: 130px;" placeholder="Room Code (e.g. GATE99)">
+            <button class="btn btn-sm" onclick="joinSocketRoom()">Join Room</button>
+            <button class="btn btn-secondary btn-sm" onclick="leaveSocketRoom()">Leave</button>
+          </div>
+
+          <div class="quick-preset-row">
+            <button class="btn btn-secondary btn-sm" onclick="sendSocketReaction('🔥')">🔥 Fire</button>
+            <button class="btn btn-secondary btn-sm" onclick="sendSocketReaction('👏')">👏 Clap</button>
+            <button class="btn btn-secondary btn-sm" onclick="sendSocketReaction('❤️')">❤️ Love</button>
+            <button class="btn btn-secondary btn-sm" onclick="sendSocketReaction('💯')">💯 100</button>
+            <button class="btn btn-secondary btn-sm" onclick="sendSocketProgress(25)">+25m Focus</button>
+          </div>
+
+          <div class="socket-log" id="socket-log-output">
+            <div class="socket-log-entry">Socket logs will stream here when connected...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let socket = null;
+    let currentEndpointFn = null;
+
+    const suites = {
+      auth: {
+        title: 'Authentication & Account Management',
+        render: () => `
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-post">POST</span>
+              <span class="endpoint-url">/auth/guest</span>
+            </div>
+            <p style="color: #A3A3AB; font-size: 12px; margin-bottom: 10px;">Create a guest session instantly without credentials.</p>
+            <button class="btn btn-sm" onclick="executeApi('POST', '/auth/guest', {})">Run Guest Login</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-post">POST</span>
+              <span class="endpoint-url">/auth/register</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Name</label>
+              <input type="text" id="reg-name" class="form-control" value="Pawan Focus">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" id="reg-email" class="form-control" value="test@habitx.app">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <input type="password" id="reg-password" class="form-control" value="Password123!">
+            </div>
+            <button class="btn btn-sm" onclick="runRegister()">Register User</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-post">POST</span>
+              <span class="endpoint-url">/auth/verify-email</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" id="verify-email" class="form-control" value="test@habitx.app">
+            </div>
+            <div class="form-group">
+              <label class="form-label">6-Digit OTP Code</label>
+              <input type="text" id="verify-otp" class="form-control" placeholder="123456">
+            </div>
+            <button class="btn btn-sm" onclick="runVerifyEmail()">Verify Email</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-post">POST</span>
+              <span class="endpoint-url">/auth/login</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" id="login-email" class="form-control" value="test@habitx.app">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Password</label>
+              <input type="password" id="login-password" class="form-control" value="Password123!">
+            </div>
+            <button class="btn btn-sm" onclick="runLogin()">Login</button>
+          </div>
+        `
+      },
+      user: {
+        title: 'User Profile & Preferences',
+        render: () => `
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-get">GET</span>
+              <span class="endpoint-url">/users/profile</span>
+            </div>
+            <p style="color: #A3A3AB; font-size: 12px; margin-bottom: 10px;">Fetch logged-in user profile, level progress & streak info.</p>
+            <button class="btn btn-sm" onclick="executeApi('GET', '/users/profile')">Get Profile</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-patch">PATCH</span>
+              <span class="endpoint-url">/users/preferences</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Preferences Payload</label>
+              <textarea id="user-pref-body" class="form-control">{
+  "theme": "dark",
+  "defaultFocusDuration": 45,
+  "soundPreset": "Rain",
+  "strictModeDefault": false,
+  "doomscrollProtection": {
+    "instagramReels": true,
+    "youtubeShorts": true,
+    "facebookReels": true,
+    "snapchatSpotlight": true
+  }
+}</textarea>
+            </div>
+            <button class="btn btn-sm" onclick="runUpdatePreferences()">Save Preferences</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-post">POST</span>
+              <span class="endpoint-url">/users/onboarding</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Onboarding Setup</label>
+              <textarea id="onboarding-body" class="form-control">{
+  "goals": ["Study", "Reduce screen time", "Crack GATE"],
+  "distractions": ["Instagram", "YouTube Shorts", "Reddit"],
+  "focusTargetMinutes": 180,
+  "bestFocusTime": "Evening (7 PM - 9 PM)"
+}</textarea>
+            </div>
+            <button class="btn btn-sm" onclick="runSaveOnboarding()">Save Onboarding</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-get">GET</span>
+              <span class="endpoint-url">/users/export</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="executeApi('GET', '/users/export')">Export All Data</button>
+          </div>
+        `
+      },
+      focus: {
+        title: 'Focus Sessions (Timer, Pomodoro, Deep Work)',
+        render: () => `
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-post">POST</span>
+              <span class="endpoint-url">/focus/start</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Start Session Config</label>
+              <textarea id="focus-start-body" class="form-control">{
+  "title": "Mathematics & Algorithms",
+  "category": "Study",
+  "mode": "timer",
+  "plannedDurationMinutes": 45,
+  "strictMode": false,
+  "blockedApps": ["com.instagram.android", "com.google.android.youtube"],
+  "soundTrack": "Rain"
+}</textarea>
+            </div>
+            <button class="btn btn-sm" onclick="runStartFocus()">Start Focus Session</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-get">GET</span>
+              <span class="endpoint-url">/focus/active</span>
+            </div>
+            <button class="btn btn-sm" onclick="executeApi('GET', '/focus/active')">Get Active Session</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-post">POST</span>
+              <span class="endpoint-url">/focus/:id/finish</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Session ID</label>
+              <input type="text" id="finish-session-id" class="form-control" placeholder="Session Mongo ObjectId">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Finish Payload</label>
+              <textarea id="focus-finish-body" class="form-control">{
+  "actualDurationSeconds": 2700,
+  "interruptionsCount": 0,
+  "notes": "Completed calculus chapter 4"
+}</textarea>
+            </div>
+            <button class="btn btn-sm" onclick="runFinishFocus()">Finish Focus Session</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-get">GET</span>
+              <span class="endpoint-url">/focus/summary</span>
+            </div>
+            <button class="btn btn-sm" onclick="executeApi('GET', '/focus/summary')">Get Today & Weekly Summary</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-get">GET</span>
+              <span class="endpoint-url">/focus/history</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="executeApi('GET', '/focus/history')">Get Focus History</button>
+          </div>
+        `
+      },
+      blocking: {
+        title: 'App & Website Blocking Engine',
+        render: () => `
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-get">GET</span>
+              <span class="endpoint-url">/blocking/active-rules</span>
+            </div>
+            <p style="color: #A3A3AB; font-size: 12px; margin-bottom: 10px;">Returns active block sessions, doomscroll protection flags, and limits for native engine.</p>
+            <button class="btn btn-sm" onclick="executeApi('GET', '/blocking/active-rules')">Get Active Rules</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-post">POST</span>
+              <span class="endpoint-url">/blocking/apps</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">App Rule Payload</label>
+              <textarea id="app-rule-body" class="form-control">{
+  "packageIdentifier": "com.instagram.android",
+  "displayName": "Instagram",
+  "category": "Social",
+  "classification": "Distracting",
+  "mode": "daily_limit",
+  "dailyLimitMinutes": 45,
+  "warningThresholdMinutes": 10,
+  "enabled": true,
+  "strict": false
+}</textarea>
+            </div>
+            <button class="btn btn-sm" onclick="runSaveAppRule()">Save App Rule</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-post">POST</span>
+              <span class="endpoint-url">/blocking/websites</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Website Rule Payload</label>
+              <textarea id="website-rule-body" class="form-control">{
+  "domain": "reddit.com",
+  "type": "BLOCK",
+  "category": "Social",
+  "mode": "focus_only",
+  "enabled": true,
+  "strict": false
+}</textarea>
+            </div>
+            <button class="btn btn-sm" onclick="runSaveWebsiteRule()">Save Website Rule</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-post">POST</span>
+              <span class="endpoint-url">/blocking/intervention</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Intervention Log</label>
+              <textarea id="intervention-body" class="form-control">{
+  "packageIdentifier": "com.instagram.android",
+  "reflectionSeconds": 3
+}</textarea>
+            </div>
+            <button class="btn btn-sm" onclick="runRecordIntervention()">Record Block Intervention</button>
+          </div>
+        `
+      },
+      habits: {
+        title: 'Habits & Streaks Management',
+        render: () => `
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-get">GET</span>
+              <span class="endpoint-url">/habits</span>
+            </div>
+            <button class="btn btn-sm" onclick="executeApi('GET', '/habits')">Get Today's Habits</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-post">POST</span>
+              <span class="endpoint-url">/habits</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Habit Config</label>
+              <textarea id="create-habit-body" class="form-control">{
+  "name": "Study 2 Hours",
+  "description": "Deep focused study without distractions",
+  "type": "duration",
+  "target": 120,
+  "unit": "min",
+  "frequency": "everyday",
+  "color": "#9B7AF5",
+  "icon": "book"
+}</textarea>
+            </div>
+            <button class="btn btn-sm" onclick="runCreateHabit()">Create Habit</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-post">POST</span>
+              <span class="endpoint-url">/habits/:id/log</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Habit ID</label>
+              <input type="text" id="log-habit-id" class="form-control" placeholder="Habit ObjectId">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Log Payload</label>
+              <textarea id="log-habit-body" class="form-control">{
+  "status": "completed",
+  "value": 120,
+  "notes": "Finished study session with 100% focus"
+}</textarea>
+            </div>
+            <button class="btn btn-sm" onclick="runLogHabit()">Log Habit Completion (+20 XP)</button>
+          </div>
+        `
+      },
+      goals: {
+        title: 'Goals & Milestones',
+        render: () => `
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-get">GET</span>
+              <span class="endpoint-url">/goals</span>
+            </div>
+            <button class="btn btn-sm" onclick="executeApi('GET', '/goals')">List Goals</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-post">POST</span>
+              <span class="endpoint-url">/goals</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Goal Config</label>
+              <textarea id="create-goal-body" class="form-control">{
+  "title": "Crack GATE Exam",
+  "description": "Secure top 100 rank with disciplined daily practice",
+  "reason": "Master core computer science and build strong foundations",
+  "targetFocusHours": 100,
+  "color": "#9B7AF5"
+}</textarea>
+            </div>
+            <button class="btn btn-sm" onclick="runCreateGoal()">Create Goal</button>
+          </div>
+        `
+      },
+      schedules: {
+        title: 'Schedule Planner',
+        render: () => `
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-get">GET</span>
+              <span class="endpoint-url">/schedules</span>
+            </div>
+            <button class="btn btn-sm" onclick="executeApi('GET', '/schedules')">Get Schedules</button>
+            <button class="btn btn-secondary btn-sm" onclick="executeApi('GET', '/schedules/upcoming')">Get Upcoming Schedule</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-post">POST</span>
+              <span class="endpoint-url">/schedules</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Schedule Config</label>
+              <textarea id="create-schedule-body" class="form-control">{
+  "name": "Evening Deep Work",
+  "days": [1, 2, 3, 4, 5],
+  "startTime": "19:00",
+  "endTime": "21:00",
+  "focusType": "Study",
+  "durationMinutes": 120,
+  "blockedApps": ["com.instagram.android", "com.google.android.youtube"],
+  "strictMode": false
+}</textarea>
+            </div>
+            <button class="btn btn-sm" onclick="runCreateSchedule()">Create Schedule</button>
+          </div>
+        `
+      },
+      rooms: {
+        title: 'Multiplayer Focus Rooms',
+        render: () => `
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-get">GET</span>
+              <span class="endpoint-url">/rooms/public</span>
+            </div>
+            <button class="btn btn-sm" onclick="executeApi('GET', '/rooms/public')">Get Public Focus Rooms</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-post">POST</span>
+              <span class="endpoint-url">/rooms/create</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Room Config</label>
+              <textarea id="create-room-body" class="form-control">{
+  "name": "GATE Study Sprint",
+  "category": "Study",
+  "durationMinutes": 45,
+  "isPublic": true,
+  "maxParticipants": 50,
+  "leaderboardEnabled": true
+}</textarea>
+            </div>
+            <button class="btn btn-sm" onclick="runCreateRoom()">Create Room</button>
+          </div>
+        `
+      },
+      leaderboard: {
+        title: 'Global & Friends Leaderboards',
+        render: () => `
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-get">GET</span>
+              <span class="endpoint-url">/leaderboard</span>
+            </div>
+            <div class="quick-preset-row">
+              <button class="btn btn-sm" onclick="executeApi('GET', '/leaderboard?timeframe=weekly')">Weekly Rankings</button>
+              <button class="btn btn-secondary btn-sm" onclick="executeApi('GET', '/leaderboard?timeframe=daily')">Daily Rankings</button>
+              <button class="btn btn-secondary btn-sm" onclick="executeApi('GET', '/leaderboard?timeframe=monthly')">Monthly Rankings</button>
+            </div>
+          </div>
+        `
+      },
+      gamification: {
+        title: 'Gamification (XP, Levels, Achievements & Rewards)',
+        render: () => `
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-get">GET</span>
+              <span class="endpoint-url">/gamification/overview</span>
+            </div>
+            <button class="btn btn-sm" onclick="executeApi('GET', '/gamification/overview')">Get XP & Level Progress</button>
+            <button class="btn btn-secondary btn-sm" onclick="executeApi('GET', '/gamification/achievements')">Get Achievements</button>
+            <button class="btn btn-secondary btn-sm" onclick="executeApi('GET', '/gamification/rewards')">Get Rewards</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-post">POST</span>
+              <span class="endpoint-url">/gamification/rewards</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Create Custom Personal Reward</label>
+              <textarea id="create-reward-body" class="form-control">{
+  "title": "Watch 1 Movie",
+  "costXp": 250,
+  "icon": "film"
+}</textarea>
+            </div>
+            <button class="btn btn-sm" onclick="runCreateReward()">Create Reward</button>
+          </div>
+        `
+      },
+      ai: {
+        title: 'AI Companion & Explainable Insights',
+        render: () => `
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-get">GET</span>
+              <span class="endpoint-url">/ai/companion</span>
+            </div>
+            <p style="color: #A3A3AB; font-size: 12px; margin-bottom: 10px;">Returns explainable focus window insights, momentum cards, and nudges.</p>
+            <button class="btn btn-sm" onclick="executeApi('GET', '/ai/companion')">Get AI Companion Insights</button>
+            <button class="btn btn-secondary btn-sm" onclick="executeApi('GET', '/ai/weekly-review')">Get AI Weekly Review</button>
+          </div>
+        `
+      },
+      screentime: {
+        title: 'Digital Wellbeing & Screen Time Analytics',
+        render: () => `
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-post">POST</span>
+              <span class="endpoint-url">/screen-time/log</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Log Screen Time Entry</label>
+              <textarea id="screentime-body" class="form-control">{
+  "totalScreenTimeMinutes": 210,
+  "productiveMinutes": 130,
+  "distractedMinutes": 50,
+  "neutralMinutes": 30,
+  "unplannedAppOpens": 4,
+  "blockInterventions": 2,
+  "appUsages": [
+    { "packageIdentifier": "com.instagram.android", "displayName": "Instagram", "classification": "Distracting", "durationMinutes": 45, "openCount": 8 },
+    { "packageIdentifier": "com.google.android.youtube", "displayName": "YouTube", "classification": "Neutral", "durationMinutes": 35, "openCount": 4 },
+    { "packageIdentifier": "org.mozilla.firefox", "displayName": "Firefox", "classification": "Productive", "durationMinutes": 90, "openCount": 5 }
+  ]
+}</textarea>
+            </div>
+            <button class="btn btn-sm" onclick="runLogScreenTime()">Log Daily Screen Time</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-get">GET</span>
+              <span class="endpoint-url">/screen-time/daily</span>
+            </div>
+            <button class="btn btn-sm" onclick="executeApi('GET', '/screen-time/daily')">Get Daily Screen Time</button>
+            <button class="btn btn-secondary btn-sm" onclick="executeApi('GET', '/screen-time/weekly')">Get Weekly Trends</button>
+          </div>
+        `
+      },
+      notifications: {
+        title: 'Notifications & Smart Nudges',
+        render: () => `
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-get">GET</span>
+              <span class="endpoint-url">/notifications</span>
+            </div>
+            <button class="btn btn-sm" onclick="executeApi('GET', '/notifications')">Get Notifications</button>
+          </div>
+
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-post">POST</span>
+              <span class="endpoint-url">/notifications/smart-nudge</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Smart Nudge Payload</label>
+              <textarea id="nudge-body" class="form-control">{
+  "title": "Evening Focus Routine",
+  "body": "Your usual 7:00 PM focus session starts in 15 minutes. 2 apps will be protected.",
+  "type": "SMART_NUDGE"
+}</textarea>
+            </div>
+            <button class="btn btn-sm" onclick="runTriggerNudge()">Trigger Smart Nudge</button>
+          </div>
+        `
+      },
+      music: {
+        title: 'Focus Music & Ambient Sounds',
+        render: () => `
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-get">GET</span>
+              <span class="endpoint-url">/music/tracks</span>
+            </div>
+            <p style="color: #A3A3AB; font-size: 12px; margin-bottom: 10px;">Fetch curated sound tracks (Rain, Forest, Ocean, Cafe, White Noise, Lo-fi, Ambient, Binaural).</p>
+            <button class="btn btn-sm" onclick="executeApi('GET', '/music/tracks')">Get Music Catalog</button>
+          </div>
+        `
+      },
+      sync: {
+        title: 'Offline-First Drift Batch Sync',
+        render: () => `
+          <div class="endpoint-card">
+            <div class="endpoint-header">
+              <span class="badge badge-post">POST</span>
+              <span class="endpoint-url">/sync/batch</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Drift Local Database Batch Queue</label>
+              <textarea id="sync-body" class="form-control">{
+  "focusSessions": [
+    { "title": "Offline Study Session", "plannedDurationMinutes": 30, "actualDurationSeconds": 1800, "status": "completed" }
+  ],
+  "habits": [
+    { "name": "Offline Reading Habit", "type": "duration", "target": 20 }
+  ]
+}</textarea>
+            </div>
+            <button class="btn btn-sm" onclick="runBatchSync()">Execute Batch Sync</button>
+          </div>
+        `
+      }
+    };
+
+    function switchSuite(key) {
+      document.querySelectorAll('.nav-item').forEach((item) => item.classList.remove('active'));
+      const activeBtn = Array.from(document.querySelectorAll('.nav-item')).find((btn) => btn.getAttribute('onclick')?.includes(key));
+      if (activeBtn) activeBtn.classList.add('active');
+
+      const suite = suites[key];
+      if (suite) {
+        document.getElementById('suite-title').textContent = suite.title;
+        document.getElementById('suite-content').innerHTML = suite.render();
+      }
+    }
+
+    async function executeApi(method, endpoint, body = null) {
+      const baseUrl = document.getElementById('base-url').value.trim();
+      const token = document.getElementById('jwt-token').value.trim();
+      const url = `${baseUrl}${endpoint}`;
+
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+
+      if (token) {
+        headers['Authorization'] = token.startsWith('Bearer ') ? token : `Bearer ${token}`;
+      }
+
+      const options = { method, headers };
+      if (body && (method === 'POST' || method === 'PATCH' || method === 'PUT')) {
+        options.body = typeof body === 'string' ? body : JSON.stringify(body);
+      }
+
+      const startTime = performance.now();
+      const responseOutput = document.getElementById('response-output');
+      const responseStatus = document.getElementById('response-status');
+      const responseTime = document.getElementById('response-time');
+
+      responseOutput.textContent = 'Executing request...';
+
+      try {
+        const res = await fetch(url, options);
+        const duration = Math.round(performance.now() - startTime);
+        const data = await res.json();
+
+        responseTime.textContent = `${duration} ms`;
+        responseStatus.textContent = `${res.status} ${res.statusText || ''}`;
+
+        if (res.ok) {
+          responseStatus.className = 'status-pill status-200';
+        } else {
+          responseStatus.className = 'status-pill status-400';
+        }
+
+        responseOutput.textContent = JSON.stringify(data, null, 2);
+
+        if (data?.data?.tokens?.accessToken) {
+          saveToken(data.data.tokens.accessToken);
+        } else if (data?.data?.token) {
+          saveToken(data.data.token);
+        }
+
+        return data;
+      } catch (err) {
+        const duration = Math.round(performance.now() - startTime);
+        responseTime.textContent = `${duration} ms`;
+        responseStatus.textContent = 'ERROR';
+        responseStatus.className = 'status-pill status-400';
+        responseOutput.textContent = `Fetch Failed: ${err.message}\nMake sure the backend server is running.`;
+      }
+    }
+
+    async function pingHealth() {
+      const baseUrl = document.getElementById('base-url').value.trim();
+      await executeApi('GET', '/health');
+    }
+
+    async function quickGuestAuth() {
+      const res = await executeApi('POST', '/auth/guest', {});
+      if (res?.data?.tokens?.accessToken) {
+        saveToken(res.data.tokens.accessToken);
+      }
+    }
+
+    function saveToken(token) {
+      document.getElementById('jwt-token').value = token;
+      localStorage.setItem('habitx_test_token', token);
+      updateTokenState();
+      connectSocket(token);
+    }
+
+    function clearAuth() {
+      document.getElementById('jwt-token').value = '';
+      localStorage.removeItem('habitx_test_token');
+      updateTokenState();
+      if (socket) socket.disconnect();
+    }
+
+    function updateTokenState() {
+      const token = document.getElementById('jwt-token').value.trim();
+      const dot = document.getElementById('auth-status-dot');
+      const text = document.getElementById('auth-status-text');
+
+      if (token) {
+        dot.classList.add('active');
+        text.textContent = 'Authenticated (Bearer Active)';
+      } else {
+        dot.classList.remove('active');
+        text.textContent = 'Not Authenticated';
+      }
+    }
+
+    function clearResponse() {
+      document.getElementById('response-output').textContent = 'Cleared.';
+      document.getElementById('response-status').textContent = 'READY';
+      document.getElementById('response-status').className = 'status-pill status-200';
+      document.getElementById('response-time').textContent = '0 ms';
+    }
+
+    function runRegister() {
+      const name = document.getElementById('reg-name').value;
+      const email = document.getElementById('reg-email').value;
+      const password = document.getElementById('reg-password').value;
+      executeApi('POST', '/auth/register', { name, email, password });
+    }
+
+    function runVerifyEmail() {
+      const email = document.getElementById('verify-email').value;
+      const otp = document.getElementById('verify-otp').value;
+      executeApi('POST', '/auth/verify-email', { email, otp });
+    }
+
+    function runLogin() {
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      executeApi('POST', '/auth/login', { email, password });
+    }
+
+    function runUpdatePreferences() {
+      const body = document.getElementById('user-pref-body').value;
+      executeApi('PATCH', '/users/preferences', JSON.parse(body));
+    }
+
+    function runSaveOnboarding() {
+      const body = document.getElementById('onboarding-body').value;
+      executeApi('POST', '/users/onboarding', JSON.parse(body));
+    }
+
+    function runStartFocus() {
+      const body = document.getElementById('focus-start-body').value;
+      executeApi('POST', '/focus/start', JSON.parse(body)).then((data) => {
+        if (data?.data?.session?._id) {
+          const finishIdField = document.getElementById('finish-session-id');
+          if (finishIdField) finishIdField.value = data.data.session._id;
+        }
+      });
+    }
+
+    function runFinishFocus() {
+      const id = document.getElementById('finish-session-id').value.trim();
+      const body = document.getElementById('focus-finish-body').value;
+      executeApi('POST', `/focus/${id}/finish`, JSON.parse(body));
+    }
+
+    function runSaveAppRule() {
+      const body = document.getElementById('app-rule-body').value;
+      executeApi('POST', '/blocking/apps', JSON.parse(body));
+    }
+
+    function runSaveWebsiteRule() {
+      const body = document.getElementById('website-rule-body').value;
+      executeApi('POST', '/blocking/websites', JSON.parse(body));
+    }
+
+    function runRecordIntervention() {
+      const body = document.getElementById('intervention-body').value;
+      executeApi('POST', '/blocking/intervention', JSON.parse(body));
+    }
+
+    function runCreateHabit() {
+      const body = document.getElementById('create-habit-body').value;
+      executeApi('POST', '/habits', JSON.parse(body)).then((data) => {
+        if (data?.data?.habit?._id) {
+          const logHabitId = document.getElementById('log-habit-id');
+          if (logHabitId) logHabitId.value = data.data.habit._id;
+        }
+      });
+    }
+
+    function runLogHabit() {
+      const id = document.getElementById('log-habit-id').value.trim();
+      const body = document.getElementById('log-habit-body').value;
+      executeApi('POST', `/habits/${id}/log`, JSON.parse(body));
+    }
+
+    function runCreateGoal() {
+      const body = document.getElementById('create-goal-body').value;
+      executeApi('POST', '/goals', JSON.parse(body));
+    }
+
+    function runCreateSchedule() {
+      const body = document.getElementById('create-schedule-body').value;
+      executeApi('POST', '/schedules', JSON.parse(body));
+    }
+
+    function runCreateRoom() {
+      const body = document.getElementById('create-room-body').value;
+      executeApi('POST', '/rooms/create', JSON.parse(body)).then((data) => {
+        if (data?.data?.room?.roomCode) {
+          document.getElementById('socket-room-code').value = data.data.room.roomCode;
+          joinSocketRoom();
+        }
+      });
+    }
+
+    function runCreateReward() {
+      const body = document.getElementById('create-reward-body').value;
+      executeApi('POST', '/gamification/rewards', JSON.parse(body));
+    }
+
+    function runLogScreenTime() {
+      const body = document.getElementById('screentime-body').value;
+      executeApi('POST', '/screen-time/log', JSON.parse(body));
+    }
+
+    function runTriggerNudge() {
+      const body = document.getElementById('nudge-body').value;
+      executeApi('POST', '/notifications/smart-nudge', JSON.parse(body));
+    }
+
+    function runBatchSync() {
+      const body = document.getElementById('sync-body').value;
+      executeApi('POST', '/sync/batch', JSON.parse(body));
+    }
+
+    function appendSocketLog(message, type = '') {
+      const log = document.getElementById('socket-log-output');
+      const entry = document.createElement('div');
+      entry.className = `socket-log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      log.appendChild(entry);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function connectSocket(token) {
+      const baseUrl = document.getElementById('base-url').value.trim().replace('/api/v1', '');
+      if (socket) socket.disconnect();
+
+      socket = io(baseUrl, {
+        auth: { token }
+      });
+
+      socket.on('connect', () => {
+        document.getElementById('socket-status').textContent = 'Connected (Socket ID: ' + socket.id + ')';
+        document.getElementById('socket-status').style.color = '#55B887';
+        appendSocketLog('Connected to WebSocket server', 'event');
+      });
+
+      socket.on('disconnect', () => {
+        document.getElementById('socket-status').textContent = 'Disconnected';
+        document.getElementById('socket-status').style.color = '#777780';
+        appendSocketLog('Disconnected from WebSocket server');
+      });
+
+      socket.on('room_updated', (data) => {
+        appendSocketLog(`Room ${data.roomCode} updated: ${data.totalParticipants} active participants`, 'event');
+      });
+
+      socket.on('reaction_received', (data) => {
+        appendSocketLog(`${data.userName} reacted: ${data.reaction}`, 'reaction');
+      });
+
+      socket.on('participant_progress_updated', (data) => {
+        appendSocketLog(`${data.name} focused ${data.focusedMinutes}m (${data.status})`, 'event');
+      });
+    }
+
+    function joinSocketRoom() {
+      const code = document.getElementById('socket-room-code').value.trim().toUpperCase();
+      if (!code) return alert('Enter room code');
+      if (!socket || !socket.connected) connectSocket(document.getElementById('jwt-token').value.trim());
+
+      socket.emit('join_room', { roomCode: code });
+      appendSocketLog(`Emitted join_room for [${code}]`);
+    }
+
+    function leaveSocketRoom() {
+      const code = document.getElementById('socket-room-code').value.trim().toUpperCase();
+      if (socket && code) {
+        socket.emit('leave_room', { roomCode: code });
+        appendSocketLog(`Left room [${code}]`);
+      }
+    }
+
+    function sendSocketReaction(reaction) {
+      const code = document.getElementById('socket-room-code').value.trim().toUpperCase();
+      if (!code) return alert('Join a room first');
+      if (socket) {
+        socket.emit('send_reaction', { roomCode: code, reaction });
+        appendSocketLog(`Sent reaction: ${reaction}`, 'reaction');
+      }
+    }
+
+    function sendSocketProgress(mins) {
+      const code = document.getElementById('socket-room-code').value.trim().toUpperCase();
+      if (!code) return alert('Join a room first');
+      if (socket) {
+        socket.emit('update_focus_progress', { roomCode: code, focusedMinutes: mins, status: 'focusing' });
+        appendSocketLog(`Sent progress: ${mins}m`);
+      }
+    }
+
+    window.onload = () => {
+      const savedToken = localStorage.getItem('habitx_test_token');
+      if (savedToken) {
+        document.getElementById('jwt-token').value = savedToken;
+        updateTokenState();
+        connectSocket(savedToken);
+      }
+      switchSuite('auth');
+    };
+  </script>
+</body>
+</html>
