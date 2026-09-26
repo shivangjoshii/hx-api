@@ -240,15 +240,6 @@
       border-radius: 8px;
     }
 
-    .btn-danger {
-      background-color: #E16B76;
-      color: #FFFFFF;
-    }
-
-    .btn-danger:hover {
-      background-color: #D95C68;
-    }
-
     .action-row {
       display: flex;
       gap: 8px;
@@ -446,7 +437,6 @@
     <div class="panel">
       <div class="panel-header">
         <div class="panel-title" id="suite-title">Authentication Endpoints</div>
-        <button class="btn btn-secondary btn-sm" onclick="executeCurrentEndpoint()">Run Endpoint</button>
       </div>
       <div class="panel-body" id="suite-content">
       </div>
@@ -466,19 +456,23 @@
               <span id="response-time" style="font-size: 11px; color: #777780;">0 ms</span>
             </div>
           </div>
-          <div class="response-view" id="response-output">No requests made yet. Select an endpoint on the left and click "Run Endpoint" or use preset buttons.</div>
+          <div class="response-view" id="response-output">Ready. Select an endpoint or use Guest Login to authenticate.</div>
         </div>
 
         <div class="form-group" style="margin-top: 18px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
             <label class="form-label" style="margin: 0;">Socket.IO Multiplayer Focus Room</label>
-            <span id="socket-status" style="font-size: 11px; color: #777780;">Disconnected</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span class="status-dot" id="socket-status-dot"></span>
+              <span id="socket-status" style="font-size: 11px; color: #777780;">Disconnected</span>
+            </div>
           </div>
 
           <div class="action-row" style="margin-bottom: 8px;">
-            <input type="text" id="socket-room-code" class="form-control" style="width: 130px;" placeholder="Room Code (e.g. GATE99)">
+            <input type="text" id="socket-room-code" class="form-control" style="width: 130px;" value="GATE99" placeholder="Room Code">
             <button class="btn btn-sm" onclick="joinSocketRoom()">Join Room</button>
             <button class="btn btn-secondary btn-sm" onclick="leaveSocketRoom()">Leave</button>
+            <button class="btn btn-secondary btn-sm" onclick="reconnectSocketManual()">Reconnect</button>
           </div>
 
           <div class="quick-preset-row">
@@ -490,7 +484,7 @@
           </div>
 
           <div class="socket-log" id="socket-log-output">
-            <div class="socket-log-entry">Socket logs will stream here when connected...</div>
+            <div class="socket-log-entry">Socket logs will stream here...</div>
           </div>
         </div>
       </div>
@@ -499,7 +493,6 @@
 
   <script>
     let socket = null;
-    let currentEndpointFn = null;
 
     const suites = {
       auth: {
@@ -1141,12 +1134,11 @@
         responseTime.textContent = `${duration} ms`;
         responseStatus.textContent = 'ERROR';
         responseStatus.className = 'status-pill status-400';
-        responseOutput.textContent = `Fetch Failed: ${err.message}\nMake sure the backend server is running.`;
+        responseOutput.textContent = `Fetch Failed: ${err.message}\nMake sure backend is running on port 5000.`;
       }
     }
 
     async function pingHealth() {
-      const baseUrl = document.getElementById('base-url').value.trim();
       await executeApi('GET', '/health');
     }
 
@@ -1158,17 +1150,18 @@
     }
 
     function saveToken(token) {
-      document.getElementById('jwt-token').value = token;
-      localStorage.setItem('habitx_test_token', token);
+      const clean = token.startsWith('Bearer ') ? token.slice(7).trim() : token.trim();
+      document.getElementById('jwt-token').value = clean;
+      localStorage.setItem('habitx_test_token', clean);
       updateTokenState();
-      connectSocket(token);
+      connectSocket(clean);
     }
 
     function clearAuth() {
       document.getElementById('jwt-token').value = '';
       localStorage.removeItem('habitx_test_token');
       updateTokenState();
-      if (socket) socket.disconnect();
+      connectSocket('');
     }
 
     function updateTokenState() {
@@ -1317,28 +1310,61 @@
       log.scrollTop = log.scrollHeight;
     }
 
-    function connectSocket(token) {
+    function connectSocket(token = '') {
       const baseUrl = document.getElementById('base-url').value.trim().replace('/api/v1', '');
-      if (socket) socket.disconnect();
+      const rawToken = token || document.getElementById('jwt-token').value.trim();
+      const cleanToken = rawToken.startsWith('Bearer ') ? rawToken.slice(7).trim() : rawToken;
+
+      if (socket) {
+        socket.disconnect();
+      }
+
+      appendSocketLog(`Connecting to WebSocket at ${baseUrl}...`);
 
       socket = io(baseUrl, {
-        auth: { token }
+        auth: { token: cleanToken },
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionAttempts: 5
       });
 
       socket.on('connect', () => {
-        document.getElementById('socket-status').textContent = 'Connected (Socket ID: ' + socket.id + ')';
-        document.getElementById('socket-status').style.color = '#55B887';
-        appendSocketLog('Connected to WebSocket server', 'event');
+        const dot = document.getElementById('socket-status-dot');
+        const text = document.getElementById('socket-status');
+        dot.classList.add('active');
+        text.textContent = `Connected (${socket.id.slice(0, 6)})`;
+        text.style.color = '#55B887';
+        appendSocketLog(`WebSocket Connected successfully. Socket ID: ${socket.id}`, 'event');
       });
 
-      socket.on('disconnect', () => {
-        document.getElementById('socket-status').textContent = 'Disconnected';
-        document.getElementById('socket-status').style.color = '#777780';
-        appendSocketLog('Disconnected from WebSocket server');
+      socket.on('connection_established', (data) => {
+        appendSocketLog(`Identity: ${data.user?.name || 'Explorer'}`, 'event');
+      });
+
+      socket.on('disconnect', (reason) => {
+        const dot = document.getElementById('socket-status-dot');
+        const text = document.getElementById('socket-status');
+        dot.classList.remove('active');
+        text.textContent = 'Disconnected';
+        text.style.color = '#777780';
+        appendSocketLog(`WebSocket Disconnected: ${reason}`);
+      });
+
+      socket.on('connect_error', (err) => {
+        const dot = document.getElementById('socket-status-dot');
+        const text = document.getElementById('socket-status');
+        dot.classList.remove('active');
+        text.textContent = 'Connection Error';
+        text.style.color = '#E16B76';
+        appendSocketLog(`Connection Error: ${err.message}. Make sure server is running.`, 'error');
+      });
+
+      socket.on('joined_success', (data) => {
+        appendSocketLog(`Joined [${data.roomCode}] "${data.roomName}" (${data.participants?.length || 1} online)`, 'event');
       });
 
       socket.on('room_updated', (data) => {
-        appendSocketLog(`Room ${data.roomCode} updated: ${data.totalParticipants} active participants`, 'event');
+        appendSocketLog(`Room [${data.roomCode}] update: ${data.totalParticipants} focusing now`, 'event');
       });
 
       socket.on('reaction_received', (data) => {
@@ -1346,42 +1372,53 @@
       });
 
       socket.on('participant_progress_updated', (data) => {
-        appendSocketLog(`${data.name} focused ${data.focusedMinutes}m (${data.status})`, 'event');
+        appendSocketLog(`${data.name} updated: ${data.focusedMinutes}m focused`, 'event');
       });
+    }
+
+    function reconnectSocketManual() {
+      connectSocket();
     }
 
     function joinSocketRoom() {
       const code = document.getElementById('socket-room-code').value.trim().toUpperCase();
       if (!code) return alert('Enter room code');
-      if (!socket || !socket.connected) connectSocket(document.getElementById('jwt-token').value.trim());
-
+      if (!socket || !socket.connected) {
+        connectSocket();
+      }
       socket.emit('join_room', { roomCode: code });
-      appendSocketLog(`Emitted join_room for [${code}]`);
+      appendSocketLog(`Sent join_room request for [${code}]`);
     }
 
     function leaveSocketRoom() {
       const code = document.getElementById('socket-room-code').value.trim().toUpperCase();
       if (socket && code) {
         socket.emit('leave_room', { roomCode: code });
-        appendSocketLog(`Left room [${code}]`);
+        appendSocketLog(`Sent leave_room request for [${code}]`);
       }
     }
 
     function sendSocketReaction(reaction) {
       const code = document.getElementById('socket-room-code').value.trim().toUpperCase();
-      if (!code) return alert('Join a room first');
-      if (socket) {
+      if (!code) return alert('Enter a room code');
+      if (socket && socket.connected) {
         socket.emit('send_reaction', { roomCode: code, reaction });
-        appendSocketLog(`Sent reaction: ${reaction}`, 'reaction');
+        appendSocketLog(`Sent reaction ${reaction} to [${code}]`, 'reaction');
+      } else {
+        appendSocketLog('Socket is not connected. Reconnecting...', 'error');
+        connectSocket();
       }
     }
 
     function sendSocketProgress(mins) {
       const code = document.getElementById('socket-room-code').value.trim().toUpperCase();
-      if (!code) return alert('Join a room first');
-      if (socket) {
+      if (!code) return alert('Enter a room code');
+      if (socket && socket.connected) {
         socket.emit('update_focus_progress', { roomCode: code, focusedMinutes: mins, status: 'focusing' });
-        appendSocketLog(`Sent progress: ${mins}m`);
+        appendSocketLog(`Sent +${mins}m progress update to [${code}]`);
+      } else {
+        appendSocketLog('Socket is not connected. Reconnecting...', 'error');
+        connectSocket();
       }
     }
 
@@ -1390,8 +1427,8 @@
       if (savedToken) {
         document.getElementById('jwt-token').value = savedToken;
         updateTokenState();
-        connectSocket(savedToken);
       }
+      connectSocket(savedToken || '');
       switchSuite('auth');
     };
   </script>
